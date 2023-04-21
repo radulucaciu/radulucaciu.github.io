@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script type="module">
+                import {
+                    TableauViz,
+                    TableauEventType,
+                } from "https://public.tableau.com/javascripts/api/tableau.embedding.3.3.0.min.js";
+
+                const viz = new TableauViz();
+                viz.src = 'https://tableaudev.mcd.com/#/views/MCD_SCHM_TIMESERIES_W_Feedback/Timeserieshomepage';
+                viz.addEventListener(
+                    TableauEventType.FirstInteractive,
+                    handleFirstInteractive
+                );
+                document.getElementById('tableauViz').appendChild(viz);
+
+                function handleFirstInteractive() {
+                    let sheet = viz.workbook.activeSheet.worksheets.find(sheet => sheet.name == "Analysis Table");
+                    console.log(sheet);
+                    getDataFromSheet(sheet);
+                }
+
+                function getDataFromSheet(sheet) {
+                    const options = {
+                        maxRows: 100, // Max rows to return. Use 0 to return all rows
+                        ignoreAliases: false,
+                        ignoreSelection: true,
+                        includeAllColumns: false
+                    };
+
+                    sheet.getUnderlyingTablesAsync().then(tables => {
+                        console.log('---->', tables[0].id);
+                        // Get the first logical table and use that
+                        return sheet.getUnderlyingTableDataAsync(tables[0].id, options).then(dataTable => {
+                            generateTable(dataTable);
+                            //var tgt = document.getElementById("dataTarget");
+                            //tgt.innerHTML = "<h4>UnderlyingTableData:</h4><p>" + JSON.stringify(dataTable.getData()) + "</p>";
+                        });
+                    });
+                }
+
+                function generateTableRowItems(tr, itemType, tableauData) {
+                    for (const item of tableauData) { 
+                        let elem = document.createElement(itemType);
+                        elem.innerHTML = item.fieldName || item.formattedValue;
+                        tr.appendChild(elem);
+                    }
+                    if (itemType === "td") {
+                        // Add the feedback buttons
+                        let yesButton = document.createElement("a");
+                        yesButton.innerHTML = "Yes";
+                        yesButton.setAttribute("onclick","markAsFixed2()");
+                        tr.appendChild(yesButton);
+                    }
+                }
+
+                function generateTable(tableData) {
+                    //Generate the header
+                    let table = document.getElementById("schn-anomalies");
+                    let tr = table.insertRow(-1);
+                    generateTableRowItems(tr, "th", tableData.columns);
+
+                    //Generate the rows
+                    for (const row of tableData.data) {
+                        tr = table.insertRow(-1);
+                        generateTableRowItems(tr, "td", row);
+                    }
+                }
+
+                function markAsFixed() {
+                    alert(1);
+                }
+        </script>
+        <script type="text/javascript">
+                function markAsFixed2() {
+                    alert("You have confirmed this is an anomaly");
+                }
+        </script>
+    </head>
+    <body>
+        <div>
+            <table id="schn-anomalies">
+            </table>
+        </div>
+        <div id="tableauViz" style="visibility: hidden;"></div>
+
+    </body>
+</html>
